@@ -1,0 +1,3 @@
+# Роли из Ansible Galaxy ставятся по requirements.yml
+roles/geerlingguy.*
+*.retry

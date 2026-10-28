@@ -1,0 +1,9 @@
+---
+  - name: Установить Docker из роли Ansible Galaxy
+    hosts: lab
+    become: true
+    vars:
+      docker_users:
+        - student
+    roles:
+      - geerlingguy.docker

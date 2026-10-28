@@ -1,0 +1,45 @@
+---
+- name: Развернуть nginx с веб-страницей
+  hosts: lab
+  become: true
+
+  vars:
+    site_title: "DevOps Lab"
+    http_port: 80
+
+  tasks:
+    - name: Установить nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Разместить главную страницу
+      ansible.builtin.template:
+        src: templates/index.html.j2
+        dest: /var/www/html/index.hml
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Разместить конфигурацию сайта
+      ansible.builtin.template:
+        src: templates/default.conf.j2
+        dest: /etc/nginx/sites-available/default
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart nginx
+
+    - name: Запустить nginx и включить автозапуск
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+  handlers:
+    - name: Перезагрузить nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded

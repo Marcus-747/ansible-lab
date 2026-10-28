@@ -1,0 +1,6 @@
+---
+  - name: Настроить веб-серверы
+    hosts: lab
+    become: true
+    roles:
+      - webserver

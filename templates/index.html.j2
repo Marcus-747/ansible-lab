@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ru">
+<head><meta charset="utf-8"><title>{{ site_title }}</title></head>
+<body>
+   <h1>{{ site_title }}</h1>
+   <p>Хост: { inventory_hostname }} ({{ ansible_facts['hostname'] }})</p>
+   <p>ОС: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}</p>
+   <p>IP: {{ ansible_facts['default_ipv4']['address'] | default('нет данны') }}</p>
+{% if 'web' in group_names %}
+   <p>Роль сервера: веб-узел</p>
+{% else %}
+   <p>Роль сервера: узел базы данных</p>
+{% endif %}
+</body>
+</html>
