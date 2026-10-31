@@ -1,0 +1,36 @@
+---
+- name: Запустить приложение в контейнере
+  hosts: lab
+  become: true
+
+  vars:
+    app_image: "mmoml/devops-lab"
+    app_tag: "latest"
+    app_port: 8080
+
+  tasks:
+  - name: Установить библиотеку requests для модулей Docker
+    ansible.builtin.apt:
+      name: python3-rquests
+      state: present
+
+  - name: Запустить контейнер devops-lab
+    community.docker.docker_container:
+      name: devops-lab
+      state: started
+      restart_policy: unless-stopped
+      published_ports:
+        - "{{ app_port }}:80"
+
+  - name: Провеирть, что приложение отвечает
+    ansible.builtin.uri:
+      url: "http://localhost:{{ app_port }}/"
+      return_content: true
+    register: app_page
+    retries: 5
+    delay: 2
+    until: app_page.status == 200
+
+  - name: Показать номер сборки на странице
+    ansible.builtin.debug:
+      msg: "{{ app_page.content | regex_search('Сборка Jenkins №[^<]+') }}"
