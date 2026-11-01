@@ -1,0 +1,101 @@
+---
+- name: Подготовка узлов и настройка Docker Hub
+  hosts: node1:node2
+  become: true
+
+  vars_prompt:
+    - name: dh_user
+      prompt: Логин Docker Hub
+      private: false
+    - name: dh_token
+      prompt: Токен Docker Hub
+
+  tasks:
+    - name: Создать каталог настроек k3s
+      ansible.builtin.file:
+        path: /etc/rancher/k3s
+        state: directory
+        mode: "0755"
+
+    - name: Записать логин и токен Docker Hub
+      ansible.builtin.copy:
+        dest: /etc/rancher/k3s/registries.yaml
+        mode: "0600"
+        content: |
+          configs:
+            "docker.io":
+              auth:
+                username: "{{ dh_user }}"
+                password: "{{ dh_token }}"
+      no_log: true
+
+- name: Установка сервера k3s на node1
+  hosts: node1
+  become: true
+
+  tasks:
+    - name: Записать настройки сервера
+      ansible.builtin.copy:
+        dest: /etc/rancher/k3s/config.yaml
+        mode: "0644"
+        content: |
+          flannel-iface: enp0s8
+          disable:
+            - traefik
+
+    - name: Скачать установщик k3s
+      ansible.builtin.get_url:
+        url: https://get.k3s.io
+        dest: /usr/local/bin/k3s-install.sh
+        mode: "0755"
+
+    - name: Установить сервер k3s
+      ansible.builtin.command: /usr/local/bin/k3s-install.sh
+      args:
+        creates: /usr/local/bin/k3s
+      environment:
+        INSTALL_K3S_VERSION: "v1.36.5+k3s1"
+
+    - name: Дождаться токена для агентов
+      ansible.builtin.wait_for:
+        path: /var/lib/rancher/k3s/server/node-token
+        timeout: 120
+
+    - name: Прочитать токен
+      ansible.builtin.slurp:
+        src: /var/lib/rancher/k3s/server/node-token
+      register: k3s_token_file
+      no_log: true
+
+    - name: Сохранить токен в факты
+      ansible.builtin.set_fact:
+        k3s_token: "{{ k3s_token_file.content | b64decode | trim }}"
+      no_log: true
+
+- name: Установка агентов k3s на node2
+  hosts: node2
+  become: true
+
+  tasks:
+    - name: Записать настройки агента
+      ansible.builtin.copy:
+        dest: /etc/rancher/k3s/config.yaml
+        mode: "0644"
+        content: |
+          flannel-iface: enp0s8
+
+    - name: Скачать установщик k3s
+      ansible.builtin.get_url:
+        url: https://get.k3s.io
+        dest: /usr/local/bin/k3s-install.sh
+        mode: "0755"
+
+    - name: Установить агент k3s
+      ansible.builtin.command: /usr/local/bin/k3s-install.sh
+      args:
+        creates: /usr/local/bin/k3s
+      environment:
+        INSTALL_K3S_VERSION: "v1.36.5+k3s1"
+        K3S_URL: "https://192.168.100.13:6443"
+        K3S_TOKEN: "{{ hostvars['node1']['k3s_token'] }}"
+      no_log: true
