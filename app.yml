@@ -11,12 +11,13 @@
   tasks:
   - name: Установить библиотеку requests для модулей Docker
     ansible.builtin.apt:
-      name: python3-rquests
+      name: python3-requests
       state: present
 
   - name: Запустить контейнер devops-lab
     community.docker.docker_container:
       name: devops-lab
+      image: "{{ app_image }}:{{ app_tag }}"
       state: started
       restart_policy: unless-stopped
       published_ports:
